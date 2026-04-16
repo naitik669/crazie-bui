@@ -2226,5 +2226,4 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 
-import os
-bot.run(os.getenv("TOKEN"))
+
