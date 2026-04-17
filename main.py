@@ -17,7 +17,7 @@ import re
 import sys
 from collections import defaultdict, deque
 from datetime import date, datetime, timedelta
-
+from storage.db import init_db
 import aiosqlite
 import discord
 from discord import app_commands
