@@ -1976,10 +1976,25 @@ class Clutch(commands.Cog):
         if ch:
             await ch.send(msg)
         async with get_db() as db:
-            await db.execute(
-                "INSERT INTO clutch_cooldown (guild_id,channel_id,last_ping) VALUES (?,?,?)"
-                " ON CONFLICT(guild_id,channel_id) DO UPDATE SET last_ping=excluded.last_ping",
-                (guild.id, channel.id, now.isoformat()))
+            cursor = await db.execute(
+                """
+                UPDATE clutch_cooldown
+                SET last_ping = ?
+                WHERE guild_id = ? AND channel_id = ?
+                """,
+                (now.isoformat(), guild.id, channel.id)
+            )
+        
+            # If nothing updated → insert
+            if cursor.rowcount == 0:
+                await db.execute(
+                    """
+                    INSERT INTO clutch_cooldown (guild_id, channel_id, last_ping)
+                    VALUES (?, ?, ?)
+                    """,
+                    (guild.id, channel.id, now.isoformat())
+                )
+        
             await db.commit()
 
 
