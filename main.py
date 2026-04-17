@@ -16,7 +16,7 @@ import random
 import re
 import sys
 from collections import defaultdict, deque
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 
 import aiosqlite
 import discord
@@ -223,7 +223,7 @@ def progress_bar(value, max_val, length=10):
     return "█" * filled + "░" * (length - filled)
 
 def bonfire_footer(feature: str) -> str:
-    return f"🔥 Bonfire · {feature} · {datetime.utcnow().strftime('%b %d %H:%M')} UTC"
+    return f"🔥 Bonfire · {feature} · {datetime.now(UTC).strftime('%b %d %H:%M')} UTC"
 
 
 # ─────────────────────────────────────────────────────────
@@ -908,7 +908,7 @@ class IntroModal(discord.ui.Modal, title="🔥 Intro — Join the Squad"):
                 (guild.id, member.id,
                  self.name.value, self.age.value or "—",
                  self.location.value or "—", self.games.value or "—",
-                 self.bio.value, datetime.utcnow()))
+                 self.bio.value, datetime.now(UTC)))
             await db.commit()
 
         card_ch = (discord.utils.get(guild.text_channels, name="🪪・homiez-cards") or
@@ -918,7 +918,7 @@ class IntroModal(discord.ui.Modal, title="🔥 Intro — Join the Squad"):
                 title=f"🔥 {self.name.value}",
                 description=f'*"{self.bio.value}"*',
                 color=PRIMARY,
-                timestamp=datetime.utcnow())
+                timestamp=datetime.now(UTC))
             embed.set_thumbnail(url=member.display_avatar.url)
             if self.age.value:
                 embed.add_field(name="🎂 Age",   value=self.age.value,      inline=True)
@@ -991,7 +991,7 @@ class Onboarding(commands.Cog):
             join_embed = discord.Embed(
                 description=f"**{member.mention}** just pulled up to the bonfire 🔥\nWho are you? Drop your intro below 👇",
                 color=PRIMARY,
-                timestamp=datetime.utcnow())
+                timestamp=datetime.now(UTC))
             join_embed.set_thumbnail(url=member.display_avatar.url)
             join_embed.set_footer(text=f"Member #{guild.member_count}")
             view = IntroView(self.bot, guild.id)
@@ -1004,7 +1004,7 @@ class Onboarding(commands.Cog):
                 title="📥 New Member",
                 description=f"{member.mention} joined",
                 color=discord.Color.green(),
-                timestamp=datetime.utcnow())
+                timestamp=datetime.now(UTC))
             log_embed.add_field(name="Account Created", value=f"<t:{int(member.created_at.timestamp())}:R>")
             log_embed.set_thumbnail(url=member.display_avatar.url)
             await logs.send(embed=log_embed)
@@ -1076,7 +1076,7 @@ class Utility(commands.Cog):
                      option7: str = None, option8: str = None,
                      option9: str = None, option10: str = None):
         uid = interaction.user.id
-        now = datetime.utcnow().timestamp()
+        now = datetime.now(UTC).timestamp()
         if uid in self.decide_cooldowns and now - self.decide_cooldowns[uid] < DECIDE_COOLDOWN_SECONDS:
             left = int(DECIDE_COOLDOWN_SECONDS - (now - self.decide_cooldowns[uid]))
             await interaction.response.send_message(f"⏳ Chill — {left}s left.", ephemeral=True); return
@@ -1089,7 +1089,7 @@ class Utility(commands.Cog):
         async with get_db() as db:
             await db.execute(
                 "INSERT INTO decide_log (guild_id, options, result, decided_at) VALUES (?,?,?,?)",
-                (interaction.guild_id, json.dumps(options), result, datetime.utcnow()))
+                (interaction.guild_id, json.dumps(options), result, datetime.now(UTC)))
             await db.commit()
 
         embed = discord.Embed(title="🎲 The Bonfire Has Spoken", color=PRIMARY)
@@ -1250,7 +1250,7 @@ class Fun(commands.Cog):
     @app_commands.describe(target="Who's getting cooked?")
     async def roast(self, interaction: discord.Interaction, target: discord.Member):
         uid = interaction.user.id
-        now = datetime.utcnow().timestamp()
+        now = datetime.now(UTC).timestamp()
         if uid in self.roast_cooldowns and now - self.roast_cooldowns[uid] < ROAST_COOLDOWN_SECONDS:
             left = int(ROAST_COOLDOWN_SECONDS - (now - self.roast_cooldowns[uid]))
             await interaction.response.send_message(f"⏳ Cool it — {left}s left.", ephemeral=True); return
@@ -1347,7 +1347,7 @@ class LFG(commands.Cog):
     async def lfg(self, interaction: discord.Interaction, game: str, size: int):
         if not 2 <= size <= 20:
             await interaction.response.send_message("Size must be 2–20.", ephemeral=True); return
-        expires_at = datetime.utcnow() + timedelta(minutes=LFG_EXPIRY_MINUTES)
+        expires_at = datetime.now(UTC) + timedelta(minutes=LFG_EXPIRY_MINUTES)
         members    = [interaction.user.id]
 
         embed = discord.Embed(title=f"🎮 LFG — {game}", color=PURPLE)
@@ -1413,7 +1413,7 @@ class Reminders(commands.Cog):
         secs = _parse_time(time)
         if not secs:
             await interaction.response.send_message("Use `30m`, `2h`, or `1h30m`.", ephemeral=True); return
-        trigger = datetime.utcnow() + timedelta(seconds=secs)
+        trigger = datetime.now(UTC) + timedelta(seconds=secs)
         async with get_db() as db:
             cur = await db.execute(
                 "INSERT INTO reminders (guild_id,channel_id,user_id,message,trigger_at) VALUES (?,?,?,?,?)",
@@ -1433,7 +1433,7 @@ class Reminders(commands.Cog):
         secs = _parse_time(time)
         if not secs:
             await interaction.response.send_message("Use `30m`, `2h`, or `1h30m`.", ephemeral=True); return
-        trigger = datetime.utcnow() + timedelta(seconds=secs)
+        trigger = datetime.now(UTC) + timedelta(seconds=secs)
         async with get_db() as db:
             cur = await db.execute(
                 "INSERT INTO reminders (guild_id,channel_id,user_id,message,trigger_at) VALUES (?,?,?,?,?)",
@@ -1456,7 +1456,7 @@ class Reminders(commands.Cog):
     async def event(self, interaction: discord.Interaction,
                     title: str, when: str, description: str = None, location: str = "Online"):
         secs    = _parse_time(when)
-        trigger = datetime.utcnow() + timedelta(seconds=secs) if secs else None
+        trigger = datetime.now(UTC) + timedelta(seconds=secs) if secs else None
 
         embed = discord.Embed(title=f"📅 {title}", description=description or "No description yet.", color=TEAL)
         embed.add_field(name="📍 Location", value=location, inline=True)
@@ -1795,7 +1795,7 @@ class VibeCheck(commands.Cog):
     async def vibecheck(self, interaction: discord.Interaction, score: int):
         if not 1 <= score <= 5:
             await interaction.response.send_message("Score must be 1–5.", ephemeral=True); return
-        today = datetime.utcnow().date().isoformat()
+        today = datetime.now(UTC).date().isoformat()
         async with get_db() as db:
             async with db.execute(
                 "SELECT id FROM vibe_checks WHERE guild_id=? AND user_id=? AND DATE(created_at)=?",
@@ -1818,7 +1818,7 @@ class VibeCheck(commands.Cog):
 
     @app_commands.command(name="vibereport", description="📈 See this week's vibe report")
     async def vibereport(self, interaction: discord.Interaction):
-        week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+        week_ago = (datetime.now(UTC) - timedelta(days=7)).isoformat()
         async with get_db() as db:
             async with db.execute(
                 "SELECT DATE(created_at) day, AVG(score) avg, COUNT(*) cnt"
@@ -1911,7 +1911,7 @@ class Wrapped(commands.Cog):
     async def wrapped(self, interaction: discord.Interaction):
         await interaction.response.defer()
         gid       = interaction.guild_id
-        month_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        month_ago = (datetime.now(UTC) - timedelta(days=30)).isoformat()
 
         async with get_db() as db:
             async with db.execute(
@@ -1937,7 +1937,7 @@ class Wrapped(commands.Cog):
                 "SELECT COUNT(*) FROM member_intros WHERE guild_id=? AND created_at>=?", (gid, month_ago)) as cur:
                 new_homiez = (await cur.fetchone())[0]
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         embed = discord.Embed(
             title=f"🎁 Bonfire Wrapped — {now.strftime('%B %Y')}",
             description="Spotify Wrapped but make it the squad.",
@@ -2002,7 +2002,7 @@ class Clutch(commands.Cog):
                 f"🔔 Clutch pool ({len(opted)}): {', '.join(m.display_name for m in opted)}", ephemeral=True)
 
     async def check_clutch(self, guild, channel, lone):
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         async with get_db() as db:
             async with db.execute(
                 "SELECT last_ping FROM clutch_cooldown WHERE guild_id=? AND channel_id=?",
@@ -2077,7 +2077,7 @@ class AutoRoles(commands.Cog):
             await check_achievement(self.bot, guild_id, user_id, "yapper")
 
     async def log_late_vc(self, guild_id: int, user_id: int):
-        hour = datetime.utcnow().hour
+        hour = datetime.now(UTC).hour
         if not (0 <= hour < 4 or 22 <= hour <= 23):
             return
         await self._ensure_tracking(guild_id, user_id)
@@ -2285,7 +2285,7 @@ class Weather(commands.Cog):
             if ch:
                 title, desc = random.choice(WEATHER_FORECASTS)
                 embed = discord.Embed(
-                    title=f"🌤️ Daily Forecast — {datetime.utcnow().strftime('%A %b %d')}",
+                    title=f"🌤️ Daily Forecast — {datetime.now(UTC).strftime('%A %b %d')}",
                     description=f"**{title}**\n{desc}",
                     color=PRIMARY)
                 embed.set_footer(text=bonfire_footer("Weather"))
@@ -2294,7 +2294,7 @@ class Weather(commands.Cog):
     @daily_forecast.before_loop
     async def before_forecast(self):
         await self.bot.wait_until_ready()
-        now    = datetime.utcnow()
+        now    = datetime.now(UTC)
         target = now.replace(hour=9, minute=0, second=0, microsecond=0)
         if now >= target:
             target += timedelta(days=1)
@@ -2335,13 +2335,13 @@ class Challenge(commands.Cog):
                 await db.execute(
                     "INSERT OR REPLACE INTO weekly_challenge (guild_id, challenge, posted_at, completions)"
                     " VALUES (?,?,?,?)",
-                    (guild.id, challenge, datetime.utcnow().isoformat(), "[]"))
+                    (guild.id, challenge, datetime.now(UTC).isoformat(), "[]"))
                 await db.commit()
             embed = discord.Embed(
                 title="🎯 Weekly Challenge",
                 description=f"**{challenge}**",
                 color=TEAL,
-                timestamp=datetime.utcnow())
+                timestamp=datetime.now(UTC))
             embed.add_field(name="⏰ Duration", value="7 days", inline=True)
             embed.add_field(name="✅ Complete?", value="Click the button to mark done", inline=True)
             embed.set_footer(text=bonfire_footer("Challenge"))
@@ -2374,7 +2374,7 @@ class Challenge(commands.Cog):
     @weekly_post.before_loop
     async def before_weekly(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         days_until_monday = (7 - now.weekday()) % 7
         if days_until_monday == 0 and now.hour >= 10:
             days_until_monday = 7
@@ -2394,7 +2394,7 @@ class Challenge(commands.Cog):
                 await db.execute(
                     "INSERT OR REPLACE INTO weekly_challenge (guild_id, challenge, posted_at, completions)"
                     " VALUES (?,?,?,?)",
-                    (interaction.guild_id, challenge, datetime.utcnow().isoformat(), "[]"))
+                    (interaction.guild_id, challenge, datetime.now(UTC).isoformat(), "[]"))
                 await db.commit()
             completions_list = []
         else:
@@ -2424,7 +2424,7 @@ class LateNight(commands.Cog):
 
     @app_commands.command(name="latenight", description="🌙 What's on your mind tonight?")
     async def latenight(self, interaction: discord.Interaction):
-        today = datetime.utcnow().date().isoformat()
+        today = datetime.now(UTC).date().isoformat()
         async with get_db() as db:
             async with db.execute(
                 "SELECT id FROM late_night_checkins WHERE guild_id=? AND user_id=? AND DATE(created_at)=?",
@@ -2451,7 +2451,7 @@ class LateNight(commands.Cog):
     @tasks.loop(hours=24)
     async def nightly_summary(self):
         for guild in self.bot.guilds:
-            yesterday = (datetime.utcnow() - timedelta(hours=1)).date().isoformat()
+            yesterday = (datetime.now(UTC) - timedelta(hours=1)).date().isoformat()
             async with get_db() as db:
                 async with db.execute(
                     "SELECT user_id, mood, note FROM late_night_checkins"
@@ -2479,7 +2479,7 @@ class LateNight(commands.Cog):
     @nightly_summary.before_loop
     async def before_nightly(self):
         await self.bot.wait_until_ready()
-        now    = datetime.utcnow()
+        now    = datetime.now(UTC)
         target = now.replace(hour=0, minute=0, second=0, microsecond=0)
         if now >= target:
             target += timedelta(days=1)
@@ -2673,7 +2673,7 @@ class WeeklyDigest(commands.Cog):
                   discord.utils.get(guild.text_channels, name="status"))
             if not ch:
                 continue
-            week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+            week_ago = (datetime.now(UTC) - timedelta(days=7)).isoformat()
             async with get_db() as db:
                 async with db.execute(
                     "SELECT user_id, COUNT(*) cnt FROM activity_log"
@@ -2697,7 +2697,7 @@ class WeeklyDigest(commands.Cog):
                     streak_row = await cur.fetchone()
 
             embed = discord.Embed(
-                title=f"🔥 This Week at the Bonfire — {datetime.utcnow().strftime('%b %d')}",
+                title=f"🔥 This Week at the Bonfire — {datetime.now(UTC).strftime('%b %d')}",
                 color=PRIMARY)
             if top:
                 top_str = " · ".join(
@@ -2718,7 +2718,7 @@ class WeeklyDigest(commands.Cog):
     @weekly_digest.before_loop
     async def before_digest(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         # Next Sunday 6pm UTC
         days_until_sunday = (6 - now.weekday()) % 7
         if days_until_sunday == 0 and now.hour >= 18:
@@ -2753,7 +2753,7 @@ class Icebreaker(commands.Cog):
             q_id, question, category = row
             await db.execute(
                 "INSERT INTO icebreakers (guild_id, question, category, used, posted_at) VALUES (?,?,?,1,?)",
-                (interaction.guild_id, question, category, datetime.utcnow()))
+                (interaction.guild_id, question, category, datetime.now(UTC)))
             await db.commit()
 
         members = [m for m in interaction.guild.members if not m.bot]
@@ -2810,7 +2810,7 @@ class VibePulse(commands.Cog):
 
     @tasks.loop(hours=24)
     async def friday_pulse(self):
-        if datetime.utcnow().weekday() != 4:  # Friday
+        if datetime.now(UTC).weekday() != 4:  # Friday
             return
         for guild in self.bot.guilds:
             async with get_db() as db:
@@ -2833,7 +2833,7 @@ class VibePulse(commands.Cog):
     @friday_pulse.before_loop
     async def before_pulse(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         target = now.replace(hour=18, minute=0, second=0, microsecond=0) + timedelta(days=1)
         await asyncio.sleep((target - now).total_seconds())
 
@@ -2931,7 +2931,7 @@ class Poll(commands.Cog):
         await interaction.response.defer()
         options = [o for o in [option1, option2, option3, option4, option5, option6] if o]
         votes   = {str(i): [] for i in range(len(options))}
-        deadline = (datetime.utcnow() + timedelta(hours=deadline_hours)) if deadline_hours else None
+        deadline = (datetime.now(UTC) + timedelta(hours=deadline_hours)) if deadline_hours else None
 
         async with get_db() as db:
             cur = await db.execute(
@@ -3108,7 +3108,7 @@ class PairChat(commands.Cog):
     @weekly_pair.before_loop
     async def before_pair(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         days_until_monday = (7 - now.weekday()) % 7
         if days_until_monday == 0 and now.hour >= 10:
             days_until_monday = 7
@@ -3169,7 +3169,7 @@ class MemoryBoard(commands.Cog):
             await interaction.response.send_message(embed=embed)
 
         elif action == "today":
-            today = datetime.utcnow()
+            today = datetime.now(UTC)
             async with get_db() as db:
                 async with db.execute(
                     "SELECT user_id, text, image_url, created_at FROM memories"
@@ -3192,7 +3192,7 @@ class MemoryBoard(commands.Cog):
 
     @tasks.loop(hours=24)
     async def on_this_day(self):
-        today = datetime.utcnow()
+        today = datetime.now(UTC)
         for guild in self.bot.guilds:
             async with get_db() as db:
                 async with db.execute(
@@ -3222,7 +3222,7 @@ class MemoryBoard(commands.Cog):
     @on_this_day.before_loop
     async def before_otd(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         target = now.replace(hour=9, minute=30, second=0, microsecond=0)
         if now >= target:
             target += timedelta(days=1)
@@ -3302,7 +3302,7 @@ class VoiceLog(commands.Cog):
         await interaction.response.send_message(embed=embed)
 
     async def session_ended(self, guild, channel, members, started_at):
-        ended_at = datetime.utcnow()
+        ended_at = datetime.now(UTC)
         duration = int((ended_at - started_at).total_seconds() / 60)
         if duration < 2:
             return
@@ -3471,7 +3471,7 @@ class StatsCard(commands.Cog):
         await interaction.response.defer(ephemeral=(target == interaction.user))
         gid = interaction.guild_id
         uid = target.id
-        month_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+        month_ago = (datetime.now(UTC) - timedelta(days=30)).isoformat()
 
         async with get_db() as db:
             async with db.execute(
@@ -3543,7 +3543,7 @@ class StatsCard(commands.Cog):
         if ego_row:
             embed.add_field(name="🎭 Alter Ego", value=ego_row[0], inline=True)
         if target.joined_at:
-            days_in = (datetime.utcnow() - target.joined_at.replace(tzinfo=None)).days
+            days_in = (datetime.now(UTC) - target.joined_at.replace(tzinfo=None)).days
             embed.add_field(name="📅 Days in Server", value=str(days_in), inline=True)
 
         embed.set_footer(text=bonfire_footer("Stats Card"))
@@ -3576,7 +3576,7 @@ class BonfireBets(commands.Cog):
         if action == "create":
             if not question or not option1 or not option2:
                 await interaction.response.send_message("Provide question and both options.", ephemeral=True); return
-            deadline = datetime.utcnow() + timedelta(hours=deadline_hours)
+            deadline = datetime.now(UTC) + timedelta(hours=deadline_hours)
             async with get_db() as db:
                 cur = await db.execute(
                     "INSERT INTO bets (guild_id,creator_id,question,option1,option2,deadline)"
@@ -3701,7 +3701,7 @@ class ServerTemp(commands.Cog):
         self.daily_temp.cancel()
 
     async def _calculate_temp(self, guild):
-        day_ago = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+        day_ago = (datetime.now(UTC) - timedelta(hours=24)).isoformat()
         async with get_db() as db:
             async with db.execute(
                 "SELECT COUNT(*) FROM activity_log WHERE guild_id=? AND created_at>=? AND activity_type='message'",
@@ -3752,7 +3752,7 @@ class ServerTemp(commands.Cog):
     @daily_temp.before_loop
     async def before_temp(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         target = now.replace(hour=12, minute=0, second=0, microsecond=0)
         if now >= target:
             target += timedelta(days=1)
@@ -3840,7 +3840,7 @@ class ConfessionModal(discord.ui.Modal, title="💌 Anonymous Confession"):
         guild = interaction.guild
 
         user_hash = hashlib.sha256(
-            f"{interaction.user.id}{guild.id}{datetime.utcnow().strftime('%Y%m')}".encode()
+            f"{interaction.user.id}{guild.id}{datetime.now(UTC).strftime('%Y%m')}".encode()
         ).hexdigest()[:8]
 
         ch = (discord.utils.get(guild.text_channels, name="💌・confessions") or
@@ -3903,7 +3903,7 @@ class Availability(commands.Cog):
             async with get_db() as db:
                 await db.execute(
                     "INSERT OR REPLACE INTO availability (guild_id, user_id, schedule, updated_at) VALUES (?,?,?,?)",
-                    (interaction.guild_id, interaction.user.id, schedule, datetime.utcnow()))
+                    (interaction.guild_id, interaction.user.id, schedule, datetime.now(UTC)))
                 await db.commit()
             embed = discord.Embed(title="📅 Availability Set", description=f"**{schedule}**", color=TEAL)
             embed.set_footer(text=bonfire_footer("Availability"))
@@ -3991,7 +3991,7 @@ class HotSeat(commands.Cog):
                 await asyncio.sleep(600)
                 async with get_db() as db:
                     await db.execute("UPDATE hotseat SET active=0, ended_at=? WHERE id=?",
-                                     (datetime.utcnow(), hs_id))
+                                     (datetime.now(UTC), hs_id))
                     await db.commit()
                 end_embed = discord.Embed(
                     title=f"🎤 Hot Seat Report — {member.display_name}",
@@ -4260,7 +4260,7 @@ class FridayPost(commands.Cog):
 
     @tasks.loop(hours=24)
     async def friday_post(self):
-        if datetime.utcnow().weekday() != 4:
+        if datetime.now(UTC).weekday() != 4:
             return
         for guild in self.bot.guilds:
             ch = (discord.utils.get(guild.text_channels, name="🔥・general") or
@@ -4291,7 +4291,7 @@ class FridayPost(commands.Cog):
             async with get_db() as db:
                 await db.execute(
                     "INSERT INTO weekly_vote (guild_id, posted_at) VALUES (?,?)",
-                    (guild.id, datetime.utcnow()))
+                    (guild.id, datetime.now(UTC)))
                 await db.commit()
 
             # Post forecast at 7pm
@@ -4312,7 +4312,7 @@ class FridayPost(commands.Cog):
     @friday_post.before_loop
     async def before_friday(self):
         await self.bot.wait_until_ready()
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         days_until_friday = (4 - now.weekday()) % 7
         if days_until_friday == 0 and now.hour >= 17:
             days_until_friday = 7
@@ -4355,7 +4355,7 @@ class DeadChat(commands.Cog):
             try:
                 async for msg in ch.history(limit=1):
                     last_msg_time = msg.created_at.replace(tzinfo=None)
-                    hours_since = (datetime.utcnow() - last_msg_time).total_seconds() / 3600
+                    hours_since = (datetime.now(UTC) - last_msg_time).total_seconds() / 3600
                     if hours_since < DEAD_CHAT_HOURS:
                         break
 
@@ -4365,7 +4365,7 @@ class DeadChat(commands.Cog):
                             "SELECT last_post FROM dead_chat_log WHERE guild_id=?", (guild.id,)) as cur:
                             row = await cur.fetchone()
                     if row:
-                        hours_since_last = (datetime.utcnow() - datetime.fromisoformat(row[0])).total_seconds() / 3600
+                        hours_since_last = (datetime.now(UTC) - datetime.fromisoformat(row[0])).total_seconds() / 3600
                         if hours_since_last < DEAD_CHAT_COOLDOWN_HOURS:
                             break
 
@@ -4391,7 +4391,7 @@ class DeadChat(commands.Cog):
                     async with get_db() as db:
                         await db.execute(
                             "INSERT OR REPLACE INTO dead_chat_log (guild_id, last_post) VALUES (?,?)",
-                            (guild.id, datetime.utcnow().isoformat()))
+                            (guild.id, datetime.now(UTC).isoformat()))
                         await db.commit()
             except Exception:
                 pass
@@ -4435,7 +4435,7 @@ class Seasons(commands.Cog):
                     (guild.id,)) as cur:
                     prev = await cur.fetchone()
                 if prev:
-                    await db.execute("UPDATE seasons SET ended_at=? WHERE id=?", (datetime.utcnow(), prev[0]))
+                    await db.execute("UPDATE seasons SET ended_at=? WHERE id=?", (datetime.now(UTC), prev[0]))
                     await db.commit()
 
             # Start new season
@@ -4443,7 +4443,7 @@ class Seasons(commands.Cog):
             async with get_db() as db:
                 await db.execute(
                     "INSERT INTO seasons (guild_id, name, started_at) VALUES (?,?,?)",
-                    (guild.id, season_name, datetime.utcnow()))
+                    (guild.id, season_name, datetime.now(UTC)))
                 await db.commit()
 
             ch = (discord.utils.get(guild.text_channels, name="📊・status") or
@@ -4456,7 +4456,7 @@ class Seasons(commands.Cog):
             if prev:
                 old_name   = prev[1]
                 started_at = prev[2]
-                week_ago   = (datetime.utcnow() - timedelta(days=90)).isoformat()
+                week_ago   = (datetime.now(UTC) - timedelta(days=90)).isoformat()
                 async with get_db() as db:
                     async with db.execute(
                         "SELECT user_id, COUNT(*) cnt FROM activity_log"
@@ -4514,8 +4514,8 @@ class Seasons(commands.Cog):
                 await interaction.followup.send("No active season. One starts automatically every 3 months.", ephemeral=True)
                 return
             name, started_at = row
-            days_in = (datetime.utcnow() - datetime.fromisoformat(str(started_at))).days
-            week_ago = (datetime.utcnow() - timedelta(days=days_in)).isoformat()
+            days_in = (datetime.now(UTC) - datetime.fromisoformat(str(started_at))).days
+            week_ago = (datetime.now(UTC) - timedelta(days=days_in)).isoformat()
             async with get_db() as db:
                 async with db.execute(
                     "SELECT user_id, COUNT(*) cnt FROM activity_log"
@@ -4733,7 +4733,7 @@ class FriendshipMilestones(commands.Cog):
     async def check_server_anniversary(self, guild, member: discord.Member):
         if not member.joined_at:
             return
-        days = (datetime.utcnow() - member.joined_at.replace(tzinfo=None)).days
+        days = (datetime.now(UTC) - member.joined_at.replace(tzinfo=None)).days
         milestones_map = {
             30:  "📅 1 Month at the Bonfire",
             90:  "📅 3 Months — you're becoming lore",
@@ -4786,7 +4786,7 @@ class EventHub(commands.Cog):
  
         # Server anniversary check (daily, only if message was first today from user)
         if milestones_cog and message.author.joined_at:
-            today = datetime.utcnow().date()
+            today = datetime.now(UTC).date()
             join_day = message.author.joined_at.date()
             if today.month == join_day.month and today.day == join_day.day:
                 await milestones_cog.check_server_anniversary(message.guild, message.author)
@@ -4908,7 +4908,7 @@ class EventHub(commands.Cog):
                 async with get_db() as db:
                     await db.execute(
                         "INSERT INTO vc_active (guild_id, channel_id, members, started_at) VALUES (?,?,?,?)",
-                        (guild.id, after.channel.id, json.dumps([member.id]), datetime.utcnow()))
+                        (guild.id, after.channel.id, json.dumps([member.id]), datetime.now(UTC)))
                     await db.commit()
  
             # Late VC role tracking
