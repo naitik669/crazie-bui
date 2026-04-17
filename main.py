@@ -678,7 +678,6 @@ async def init_db():
     ]
 
     async with aiosqlite.connect(DB_PATH) as db:
-        # Execute each table creation individually to isolate errors
         for stmt in tables:
             try:
                 await db.execute(stmt)
@@ -697,7 +696,6 @@ async def init_db():
                     "INSERT INTO icebreakers (guild_id, question, category) VALUES (0, ?, ?)",
                     (question, category))
             await db.commit()
-
 
 def get_db():
     return aiosqlite.connect(DB_PATH)
